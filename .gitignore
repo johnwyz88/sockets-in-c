@@ -1,5 +1,6 @@
 #files
-sockets
+server
+client
 
 #dirs
 dir_to_ignore/
