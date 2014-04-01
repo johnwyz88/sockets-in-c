@@ -1,0 +1,7 @@
+#files
+sockets
+
+#dirs
+dir_to_ignore/
+
+
