@@ -12,6 +12,7 @@
 int main(int argc, char *argv[])
 {
     int listenfd = 0, connfd = 0;
+    int n, cli_len;
 
     /* sockaddr_in is a struct from <netinet/in.h> and it has four mem val
      * struct sockaddr_in {
@@ -32,9 +33,11 @@ int main(int argc, char *argv[])
      * };    
      */
 
-    struct sockaddr_in serv_addr;
+    struct sockaddr_in serv_addr, cli_addr;
     
     char sendBuff[1025];
+    char wrtBuff[4096];
+    char recvBuff[4096];
     time_t ticks;
     
     /* The function socket() creates a socket in kernel and returns an 
@@ -61,14 +64,17 @@ int main(int argc, char *argv[])
 
     while(1)
     {
-        connfd = accept(listenfd, (struct sockaddr *)NULL, NULL);
+        cli_len = sizeof(cli_addr);
+        connfd = accept(listenfd, (struct sockaddr *)&cli_addr, &cli_len);
+        n = read(connfd, recvBuff, 4096);
+        printf("\n New message: %s\n", recvBuff);
+        //insert(list, connfd);
+        //display(list);
 
         ticks = time(NULL);
         snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
-        write(connfd, sendBuff, strlen(sendBuff));
-
-        close(connfd);
-        /* sleep(1); */
+        snprintf(wrtBuff, sizeof(wrtBuff), "\"%s\" received at %s", recvBuff, sendBuff);
+        write(connfd, wrtBuff, strlen(wrtBuff));
     }
 }    
 
