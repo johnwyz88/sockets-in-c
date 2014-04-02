@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
 {
     int sockfd = 0, n = 0;
     char recvBuff[1024];
+    char wrtbuffer[4096];
     struct sockaddr_in serv_addr;
 
     if(argc != 2)
@@ -61,19 +62,38 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
+    while(1)
     {
-        recvBuff[n] = 0;
-        if(fputs(recvBuff, stdout) == EOF)
+        if((n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
+        {   
+            recvBuff[n] = 0;
+            if(fputs(recvBuff, stdout) == EOF)
+            {
+                printf("\n Error : Fputs error\n");
+            }
+        }
+    
+        if(n < 0)
         {
-            printf("\n Error : Fputs error\n");
+            printf("\n Read error \n");
+        }
+
+        printf("\n Enter your message: \n");
+        
+        /* bzero() is the same as memset(prt*, '0', size) */
+        bzero (wrtbuffer, 4096);
+        fgets(wrtbuffer, 4096, stdin);
+
+        n = write(sockfd, wrtbuffer, strlen(wrtbuffer));
+        if(n < 0)
+        {
+            printf("\n Write to socket error\n");
+            bzero(wrtbuffer, 4096);
+        }
+        else
+        {
+            send(sockfd, wrtbuffer, sizeof(wrtbuffer),0);
         }
     }
-
-    if(n < 0)
-    {
-        printf("\n Read error \n");
-    }
-
     return 0;
 }
