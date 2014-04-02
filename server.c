@@ -12,7 +12,7 @@
 int main(int argc, char *argv[])
 {
     int listenfd = 0, connfd = 0;
-    int n, cli_len;
+    int n, cli_len, recv_len;
 
     /* sockaddr_in is a struct from <netinet/in.h> and it has four mem val
      * struct sockaddr_in {
@@ -61,20 +61,28 @@ int main(int argc, char *argv[])
     bind(listenfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
     
     listen(listenfd, 10);
-
+    
+    cli_len = sizeof(cli_addr);
+    connfd = accept(listenfd, (struct sockaddr *)&cli_addr, &cli_len);
+        
     while(1)
     {
-        cli_len = sizeof(cli_addr);
-        connfd = accept(listenfd, (struct sockaddr *)&cli_addr, &cli_len);
         n = read(connfd, recvBuff, 4096);
-        printf("\n New message: %s\n", recvBuff);
-        //insert(list, connfd);
-        //display(list);
+        recv_len = strlen(recvBuff);
 
-        ticks = time(NULL);
-        snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
-        snprintf(wrtBuff, sizeof(wrtBuff), "\"%s\" received at %s", recvBuff, sendBuff);
-        write(connfd, wrtBuff, strlen(wrtBuff));
+        printf("\n recvBuff len: %i\n", recv_len);
+
+        if(recv_len > 0)
+        {
+            printf("\n New message: %s\n", recvBuff);
+            //insert(list, connfd);
+            //display(list);
+
+            ticks = time(NULL);
+            snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
+            snprintf(wrtBuff, sizeof(wrtBuff), "\"%s\" received at %s", recvBuff, sendBuff);
+            write(connfd, wrtBuff, strlen(wrtBuff));
+        }
     }
 }    
 

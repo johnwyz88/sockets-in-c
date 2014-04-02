@@ -11,7 +11,7 @@
 
 int main(int argc, char *argv[])
 {
-    int sockfd = 0, n = 0;
+    int sockfd = 0, n = 0, wrt_len = 0;
     char recvBuff[1024];
     char wrtbuffer[4096];
     struct sockaddr_in serv_addr;
@@ -61,6 +61,34 @@ int main(int argc, char *argv[])
         printf("\n Error : Connect Failed \n");
         return 1;
     }
+    
+    n = write(sockfd, wrtbuffer, strlen(wrtbuffer));
+    if(n < 0)
+    {
+        printf("\n Write to socket error\n");
+        bzero(wrtbuffer, 4096);
+    }
+    else
+    {
+        send(sockfd, wrtbuffer, sizeof(wrtbuffer),0);
+    }
+
+    while(1)
+    {
+        printf("\n Enter your message: \n");
+        
+        /* bzero() is the same as memset(prt*, '0', size) */
+        bzero (wrtbuffer, 4096);
+        fgets(wrtbuffer, 4096, stdin);
+        
+        wrt_len = strlen(wrtbuffer);
+        printf("\n wrt_len: %i", (int)wrt_len);
+
+        if(wrt_len > 0)
+        {
+            send(sockfd, wrtbuffer, sizeof(wrtbuffer),0);
+        }
+    }
 
     while(1)
     {
@@ -76,23 +104,6 @@ int main(int argc, char *argv[])
         if(n < 0)
         {
             printf("\n Read error \n");
-        }
-
-        printf("\n Enter your message: \n");
-        
-        /* bzero() is the same as memset(prt*, '0', size) */
-        bzero (wrtbuffer, 4096);
-        fgets(wrtbuffer, 4096, stdin);
-
-        n = write(sockfd, wrtbuffer, strlen(wrtbuffer));
-        if(n < 0)
-        {
-            printf("\n Write to socket error\n");
-            bzero(wrtbuffer, 4096);
-        }
-        else
-        {
-            send(sockfd, wrtbuffer, sizeof(wrtbuffer),0);
         }
     }
     return 0;
