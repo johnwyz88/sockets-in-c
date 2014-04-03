@@ -1,6 +1,7 @@
 #files
 server
 client
+*.swp
 
 #dirs
 dir_to_ignore/

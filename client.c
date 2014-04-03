@@ -8,14 +8,66 @@
 #include <unistd.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <pthread.h>
+
+int sockfd = 0, n = 0, wrt_len = 0;
+char recvBuff[1024];
+char wrtbuffer[4096];
+struct sockaddr_in serv_addr;
+pthread_t pthr[2];
+typedef enum { false, true }  bool;
+bool sendBool;
+
+void * readConnection(void * arg)
+{
+    if((n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
+    {   
+        recvBuff[n] = 0;
+        if(fputs(recvBuff, stdout) == EOF)
+        {
+            printf("\n Error : Fputs error\n");
+        }
+    }
+
+    if(n < 0)
+    {
+        printf("\n Read error \n");
+    }
+    return NULL;
+}
+
+void * userInput(void * arg)
+{
+    while(1)
+    {        
+        printf("\n Enter your message: \n");
+        
+        /* bzero() is the same as memset(prt*, '0', size) */
+        bzero (wrtbuffer, 4096);
+        fgets(wrtbuffer, 4096, stdin);
+        if(!strcmp(wrtbuffer.toString().trim(), "switch"))
+        {
+            printf("sendBool = false");
+            sendBool = false;
+            break;
+        }
+        if(sendBool)
+        {
+            wrt_len = strlen(wrtbuffer);
+            printf("\n wrt_len: %i", (int)wrt_len);
+
+            if(wrt_len > 0)
+            {
+                // send is equivalent to write with a 0 flag
+                send(sockfd, wrtbuffer, sizeof(wrtbuffer),0);
+            }   
+        }
+    }
+    return NULL;
+}
 
 int main(int argc, char *argv[])
 {
-    int sockfd = 0, n = 0, wrt_len = 0;
-    char recvBuff[1024];
-    char wrtbuffer[4096];
-    struct sockaddr_in serv_addr;
-
     if(argc != 2)
     {
         printf("\n Usasge: %s <ip of server> \n", argv[0]);
@@ -62,48 +114,32 @@ int main(int argc, char *argv[])
         return 1;
     }
     
-    n = write(sockfd, wrtbuffer, strlen(wrtbuffer));
     if(n < 0)
     {
         printf("\n Write to socket error\n");
         bzero(wrtbuffer, 4096);
     }
-    else
-    {
-        send(sockfd, wrtbuffer, sizeof(wrtbuffer),0);
-    }
-
-    while(1)
-    {
-        printf("\n Enter your message: \n");
-        
-        /* bzero() is the same as memset(prt*, '0', size) */
-        bzero (wrtbuffer, 4096);
-        fgets(wrtbuffer, 4096, stdin);
-        
-        wrt_len = strlen(wrtbuffer);
-        printf("\n wrt_len: %i", (int)wrt_len);
-
-        if(wrt_len > 0)
-        {
-            send(sockfd, wrtbuffer, sizeof(wrtbuffer),0);
-        }
-    }
-
-    while(1)
-    {
-        if((n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
-        {   
-            recvBuff[n] = 0;
-            if(fputs(recvBuff, stdout) == EOF)
-            {
-                printf("\n Error : Fputs error\n");
-            }
-        }
     
-        if(n < 0)
+    sendBool = true;
+
+    while(1)
+    {
+        int err;
+        if(sendBool)
         {
-            printf("\n Read error \n");
+            userInput(NULL);
+            //err = pthread_create(&pthr[0], NULL, &userInput, NULL);
+            //if(err != 0)
+            //printf("\ncan't create thread: [%s]",strerror(err));
+        }
+        else
+        {
+            printf("read connection");
+            readConnection(NULL);
+            //err = pthread_create(&pthr[1], NULL, &readConnection, NULL);
+            //if(err != 0)
+            //    printf("\ncan't create thread: [%s]",strerror(err));
+    
         }
     }
     return 0;
