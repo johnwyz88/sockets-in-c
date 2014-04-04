@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#include <fcntl.h>
 
 int sockfd = 0, n = 0, wrt_len = 0;
 char recvBuffer[4096];
@@ -74,17 +73,14 @@ int main(int argc, char *argv[])
 
     while(1)
     {
-        int flags = fcntl(sockfd, F_GETFL, 0);
-        fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
-        
+        // read socket
         bzero(recvBuffer, 4096);
         n = read(sockfd, recvBuffer, sizeof(recvBuffer));
         
         if(n != -1)
             printf("New message: %s\n", recvBuffer);
         
-        flags &= ~O_NONBLOCK;
-        fcntl(sockfd, F_SETFL, flags);
+        // read stdin
 
         printf("Enter your message: ");
         
