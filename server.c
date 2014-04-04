@@ -79,7 +79,7 @@ void * readWrite(void * arg)
                 while(current->next != NULL)
                 {
                     current = current->next;
-                    if(current->connfd != -1)
+                    if(connfd != current->connfd && current->connfd != -1)
                     {
                         write(current->connfd, recvBuff, strlen(recvBuff));
                         printf("\n writing to connfd: %i with buffer: %s", current->connfd, recvBuff);

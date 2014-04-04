@@ -1,5 +1,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -9,72 +10,22 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <fcntl.h>
 
 int sockfd = 0, n = 0, wrt_len = 0;
-char recvBuff[1024];
-char wrtbuffer[4096];
+char recvBuffer[4096];
+char wrtBuffer[4096];
 struct sockaddr_in serv_addr;
-pthread_t pthr[2];
-typedef enum { false, true }  bool;
-bool sendBool;
-
-void * readConnection(void * arg)
-{
-    if((n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
-    {   
-        recvBuff[n] = 0;
-        if(fputs(recvBuff, stdout) == EOF)
-        {
-            printf("\n Error : Fputs error\n");
-        }
-    }
-
-    if(n < 0)
-    {
-        printf("\n Read error \n");
-    }
-    return NULL;
-}
-
-void * userInput(void * arg)
-{
-    while(1)
-    {        
-        printf("\n Enter your message: \n");
-        
-        /* bzero() is the same as memset(prt*, '0', size) */
-        bzero (wrtbuffer, 4096);
-        fgets(wrtbuffer, 4096, stdin);
-        if(!strcmp(wrtbuffer.toString().trim(), "switch"))
-        {
-            printf("sendBool = false");
-            sendBool = false;
-            break;
-        }
-        if(sendBool)
-        {
-            wrt_len = strlen(wrtbuffer);
-            printf("\n wrt_len: %i", (int)wrt_len);
-
-            if(wrt_len > 0)
-            {
-                // send is equivalent to write with a 0 flag
-                send(sockfd, wrtbuffer, sizeof(wrtbuffer),0);
-            }   
-        }
-    }
-    return NULL;
-}
 
 int main(int argc, char *argv[])
 {
     if(argc != 2)
     {
-        printf("\n Usasge: %s <ip of server> \n", argv[0]);
+        printf("Usasge: %s <ip of server> \n", argv[0]);
         return 1;
     }
 
-    memset(recvBuff, '0', sizeof(recvBuff));
+    memset(recvBuffer, '0', sizeof(recvBuffer));
     
     /* No binding is needed for the client socket
      * because it is free to use any port assigned by
@@ -87,7 +38,7 @@ int main(int argc, char *argv[])
 
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        printf("\n Error: Could not create socket \n");
+        printf("Error: Could not create socket \n");
         return 1;
     }
     
@@ -98,7 +49,7 @@ int main(int argc, char *argv[])
 
     if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
     {
-        printf("\n inet_pton error occured\n");
+        printf("inet_pton error occured\n");
         return 1;
     }
     
@@ -110,37 +61,52 @@ int main(int argc, char *argv[])
 
     if(connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
-        printf("\n Error : Connect Failed \n");
+        printf("Error : Connect Failed \n");
         return 1;
     }
     
     if(n < 0)
     {
-        printf("\n Write to socket error\n");
-        bzero(wrtbuffer, 4096);
+        printf("Write to socket error\n");
+        bzero(wrtBuffer, 4096);
     }
     
-    sendBool = true;
 
     while(1)
     {
-        int err;
-        if(sendBool)
+        int flags = fcntl(sockfd, F_GETFL, 0);
+        fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+        
+        bzero(recvBuffer, 4096);
+        n = read(sockfd, recvBuffer, sizeof(recvBuffer));
+        
+        if(n != -1)
+            printf("New message: %s\n", recvBuffer);
+        
+        flags &= ~O_NONBLOCK;
+        fcntl(sockfd, F_SETFL, flags);
+
+        printf("Enter your message: ");
+        
+        /* bzero() is the same as memset(prt*, '0', size) */
+        bzero (wrtBuffer, 4096);
+        fgets(wrtBuffer, 4096, stdin);
+        printf("\n");
+
+        wrt_len = strlen(wrtBuffer);
+
+        if(wrt_len > 0)
         {
-            userInput(NULL);
-            //err = pthread_create(&pthr[0], NULL, &userInput, NULL);
-            //if(err != 0)
-            //printf("\ncan't create thread: [%s]",strerror(err));
-        }
-        else
-        {
-            printf("read connection");
-            readConnection(NULL);
-            //err = pthread_create(&pthr[1], NULL, &readConnection, NULL);
-            //if(err != 0)
-            //    printf("\ncan't create thread: [%s]",strerror(err));
-    
-        }
+            // 'send' is an equivalent to 'write' with a 0 flag
+            if(send(sockfd, wrtBuffer, sizeof(wrtBuffer),0) == -1)
+            {
+                printf("Failure sending message\n");
+                close(sockfd);
+                return 1;
+            }
+        }   
     }
+
+    close(sockfd);
     return 0;
 }
