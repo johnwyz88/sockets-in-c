@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <arpa/inet.h>
-#include <pthread.h>
 
 int sockfd = 0, n = 0, wrt_len = 0;
 char recvBuffer[4096];
@@ -70,37 +69,56 @@ int main(int argc, char *argv[])
         bzero(wrtBuffer, 4096);
     }
     
-
+    fd_set rfds;
+    struct timeval tv;
+    int retval;
+    
     while(1)
     {
-        // read socket
-        bzero(recvBuffer, 4096);
-        n = read(sockfd, recvBuffer, sizeof(recvBuffer));
+        /* Watch stdin (fd 0) to see when it has input. */
+        FD_ZERO(&rfds);
+        FD_SET(0, &rfds);
         
-        if(n != -1)
-            printf("New message: %s\n", recvBuffer);
+        /* Wait up to two seconds. */
+        tv.tv_sec = 2;
+        tv.tv_usec = 0;
         
-        // read stdin
-
-        printf("Enter your message: ");
+        retval = select(sockfd, &rfds, NULL, NULL, &tv);
         
-        /* bzero() is the same as memset(prt*, '0', size) */
-        bzero (wrtBuffer, 4096);
-        fgets(wrtBuffer, 4096, stdin);
-        printf("\n");
-
-        wrt_len = strlen(wrtBuffer);
-
-        if(wrt_len > 0)
+        if (retval == -1)
         {
-            // 'send' is an equivalent to 'write' with a 0 flag
-            if(send(sockfd, wrtBuffer, sizeof(wrtBuffer),0) == -1)
+            perror("select()");
+            exit(EXIT_FAILURE);
+        }
+        else if (retval)
+        {
+            /* FD_ISSET(0, &rfds) is true so input is available now. */
+
+            /* bzero() is the same as memset(prt*, '0', size) */
+            bzero (wrtBuffer, 4096);
+            
+            /* Read data from stdin using fgets. */
+            fgets(wrtBuffer, 4096, stdin);
+            printf("\n");
+            
+            wrt_len = strlen(wrtBuffer);
+            
+            if(wrt_len > 0 && write(sockfd, wrtBuffer, sizeof(wrtBuffer)) == -1)
             {
-                printf("Failure sending message\n");
+                printf("Fail to send message\n");
                 close(sockfd);
                 return 1;
             }
-        }   
+        }
+        else
+        {
+            // read socket
+            bzero(recvBuffer, 4096);
+            n = read(sockfd, recvBuffer, sizeof(recvBuffer));
+            
+            if(n != -1)
+                printf("New message: %s\n", recvBuffer);
+        }
     }
 
     close(sockfd);
