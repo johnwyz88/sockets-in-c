@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
         bzero(wrtBuffer, 4096);
     }
     
-    fd_set rfds;
+    fd_set rfds, sfds;
     struct timeval tv;
     int retval;
     
@@ -79,11 +79,15 @@ int main(int argc, char *argv[])
         FD_ZERO(&rfds);
         FD_SET(0, &rfds);
         
+        /* Watch socket (sockfd) to see when it has message. */
+        FD_ZERO(&sfds);
+        FD_SET(sockfd, &sfds);
+
         /* Wait up to two seconds. */
-        tv.tv_sec = 2;
+        tv.tv_sec = 0;
         tv.tv_usec = 0;
         
-        retval = select(sockfd, &rfds, NULL, NULL, &tv);
+        retval = select(sockfd + 1, &rfds, NULL, NULL, &tv);
         
         if (retval == -1)
         {
@@ -92,8 +96,6 @@ int main(int argc, char *argv[])
         }
         else if (retval)
         {
-            /* FD_ISSET(0, &rfds) is true so input is available now. */
-
             /* bzero() is the same as memset(prt*, '0', size) */
             bzero (wrtBuffer, 4096);
             
@@ -112,12 +114,15 @@ int main(int argc, char *argv[])
         }
         else
         {
-            // read socket
-            bzero(recvBuffer, 4096);
-            n = read(sockfd, recvBuffer, sizeof(recvBuffer));
-            
-            if(n != -1)
-                printf("New message: %s\n", recvBuffer);
+            if(select(sockfd + 1, &sfds, NULL, NULL, &tv))
+            {
+                // read socket
+                bzero(recvBuffer, 4096);
+                n = read(sockfd, recvBuffer, sizeof(recvBuffer));
+                
+                if(n != -1)
+                    printf("New message: %s\n", recvBuffer);
+            }
         }
     }
 

@@ -2,6 +2,8 @@
 server
 client
 *.swp
+.cproject
+.project
 
 #dirs
 dir_to_ignore/
