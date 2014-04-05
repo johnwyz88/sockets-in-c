@@ -120,8 +120,13 @@ int main(int argc, char *argv[])
                 bzero(recvBuffer, 4096);
                 n = read(sockfd, recvBuffer, sizeof(recvBuffer));
                 
-                if(n != -1)
+                if(n != -1 && strlen(recvBuffer) > 0)
                     printf("New message: %s\n", recvBuffer);
+                else {
+                	printf("Server is closed\n");
+                	close(sockfd);
+                	return 1;
+                }
             }
         }
     }

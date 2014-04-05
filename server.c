@@ -130,30 +130,29 @@ int main(int argc, char *argv[]) {
 	cli_len = sizeof(cli_addr);
 
 	// Accept new client connections
-	while (1) {
-		if ((connfd = accept(listenfd, (struct sockaddr *) &cli_addr, &cli_len))) {
-			if (head == NULL) {
-				//First connection
-				head = malloc(sizeof(node_t));
-				head->connfd = connfd;
-				head->next = NULL;
-				printf("first connection: %d", head->connfd);
-			} else {
-				node_t * current = head;
-				while (current->next != NULL) {
-					printf("%d-> ", current->connfd);
-					current = current->next;
-				}
-				current->next = malloc(sizeof(node_t));
-				current->next->connfd = connfd;
-				current->next->next = NULL;
+	while ((connfd = accept(listenfd, (struct sockaddr *) &cli_addr, &cli_len))) {
+		if (head == NULL) {
+			//First connection
+			head = malloc(sizeof(node_t));
+			head->connfd = connfd;
+			head->next = NULL;
+			printf("first connection: %d", head->connfd);
+		} else {
+			node_t * current = head;
+			while (current->next != NULL) {
+				printf("%d-> ", current->connfd);
+				current = current->next;
 			}
-
-			int err;
-			err = pthread_create(&pthr, NULL, &selectRead, NULL);
-			if (err != 0)
-				printf("\ncan't create thread :[%s]", strerror(err));
+			current->next = malloc(sizeof(node_t));
+			current->next->connfd = connfd;
+			current->next->next = NULL;
 		}
+
+		int err;
+		err = pthread_create(&pthr, NULL, &selectRead, NULL);
+		if (err != 0)
+			printf("\ncan't create thread :[%s]", strerror(err));
+
 	}
 	return 0;
 }
